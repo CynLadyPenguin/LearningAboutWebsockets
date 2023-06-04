@@ -1,0 +1,26 @@
+{
+  "name": "learningaboutwebsockets",
+  "version": "1.0.0",
+  "description": "practicing with websockets for my presentation and blog",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CynLadyPenguin/LearningAboutWebsockets.git"
+  },
+  "author": "Cyn",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CynLadyPenguin/LearningAboutWebsockets/issues"
+  },
+  "homepage": "https://github.com/CynLadyPenguin/LearningAboutWebsockets#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "nodemon": "^2.0.22",
+    "ws": "^8.13.0"
+  }
+}
