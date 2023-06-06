@@ -1,51 +1,176 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rainbow Chat Box</title>
+  <title>Card Game</title>
   <style>
+    /* Basic styling for the card game UI */
     body {
-      background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+      font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
-      color: white;
-      font-family: Arial, sans-serif;
     }
-    .chat-box {
-      background: rgba(255, 255, 255, 0.1);
-      border: 20px solid black;
-      border-radius: 10px;
-      padding: 20px;
-      width: 300px;
+
+    .card-game-container {
+      text-align: center;
     }
-    .chat-messages {
-      height: 200px;
-      overflow-y: scroll;
-      margin-bottom: 20px;
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 200px;
+      margin-right: 20px;
     }
-    .chat-input {
-      width: 85%;
+
+    .card {
+      font-size: 20px;
+      padding: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .played-card {
+      font-weight: bold;
+    }
+
+    .checkmark {
+      color: green;
+      font-size: 24px;
+    }
+
+    .game-result {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .played-cards-box {
+      margin-top: 20px;
+      border: 1px solid #000;
       padding: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="chat-box">
-    <h2>Chat</h2>
-    <div class="chat-messages" id="chat-messages">
-      <!-- messages will be appended here -->
+  <div class="card-game-container">
+    <div class="sidebar">
+      <h3>Your Cards</h3>
+      <div class="cards"></div>
+      <button class="start-game-button">Start Game</button>
     </div>
-    <input class="chat-input" id="chat-input" type="text" placeholder="Type your message here..." />
-    <button onclick="handleSendMessage()">Send</button>
+    <div>
+      <h1>Card Game</h1>
+      <div class="card played-card"></div>
+      <div class="other-card"></div>
+      <button class="play-card-button" disabled>Play Card</button>
+      <div class="checkmark"></div>
+      <div class="game-result"></div>
+      <div class="played-cards-box"></div>
+    </div>
   </div>
 
-  <script src="index.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+  <script>
+    const socket = io('http://localhost:3000');
+
+    // Get DOM elements
+    const cardsContainer = document.querySelector('.cards');
+    const startGameButton = document.querySelector('.start-game-button');
+    const playedCardDisplay = document.querySelector('.played-card');
+    const otherCardDisplay = document.querySelector('.other-card');
+    const playCardButton = document.querySelector('.play-card-button');
+    const checkmarkDisplay = document.querySelector('.checkmark');
+    const gameResultDisplay = document.querySelector('.game-result');
+    const playedCardsBox = document.querySelector('.played-cards-box');
+
+    // Selected card
+    let selectedCard = null;
+
+    // WebSocket event listeners
+    socket.on('connect', () => {
+      console.log('Connected to the server.');
+    });
+
+    socket.on('cardsUpdated', (data) => {
+      console.log('Cards updated:', data);
+      updateCards(data.cards);
+    });
+
+    socket.on('cardPlayed', (data) => {
+      console.log('Card played:', data);
+      playedCardDisplay.textContent = data.card.value;
+      otherCardDisplay.textContent = data.otherCard.value;
+      checkmarkDisplay.textContent = data.checkmark ? '✓' : '';
+      addPlayedCard(data.card, data.otherCard);
+    });
+
+    socket.on('gameResult', (data) => {
+      console.log('Game result:', data);
+      gameResultDisplay.textContent = data.message;
+    });
+
+    // Start game event listener
+    startGameButton.addEventListener('click', () => {
+      socket.emit('startGame');
+    });
+
+    // Play card event listener
+    playCardButton.addEventListener('click', () => {
+      if (selectedCard) {
+        socket.emit('playCard', { card: selectedCard });
+        selectedCard = null;
+        playedCardDisplay.textContent = '';
+        otherCardDisplay.textContent = '';
+      }
+    });
+
+    // Utility function to get the opponent's socket in a room
+const getOpponentSocket = (room, currentSocketId) => {
+  const roomClients = Array.from(io.sockets.adapter.rooms.get(room));
+  for (let clientId of roomClients) {
+    if (clientId !== currentSocketId) {
+      return io.sockets.sockets.get(clientId);
+    }
+  }
+  return null;
+};
+
+    // Update the cards in the sidebar
+    const updateCards = (cards) => {
+      cardsContainer.innerHTML = '';
+      for (let card of cards) {
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.textContent = card.value;
+        cardElement.addEventListener('click', () => {
+          selectCard(card);
+        });
+        cardsContainer.appendChild(cardElement);
+      }
+    };
+
+    // Select a card
+    const selectCard = (card) => {
+      selectedCard = card;
+      playedCardDisplay.textContent = card.value;
+      playCardButton.disabled = false;
+    };
+
+    // Add played cards to the played cards box
+    const addPlayedCard = (playerCard, otherCard) => {
+      const cardElement = document.createElement('div');
+      cardElement.textContent = `${playerCard.value} vs ${otherCard.value}`;
+      playedCardsBox.appendChild(cardElement);
+    };
+  </script>
 </body>
 </html>
+
+
+
+
+
 
 
 
