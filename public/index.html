@@ -1,171 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Card Game</title>
-  <style>
-    /* Basic styling for the card game UI */
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .card-game-container {
-      text-align: center;
-    }
-
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 200px;
-      margin-right: 20px;
-    }
-
-    .card {
-      font-size: 20px;
-      padding: 10px;
-      margin-bottom: 10px;
-      cursor: pointer;
-    }
-
-    .played-card {
-      font-weight: bold;
-    }
-
-    .checkmark {
-      color: green;
-      font-size: 24px;
-    }
-
-    .game-result {
-      font-weight: bold;
-      margin-top: 20px;
-    }
-
-    .played-cards-box {
-      margin-top: 20px;
-      border: 1px solid #000;
-      padding: 10px;
-    }
+    <title>Tic Tac Toe</title>
+    <style>
+#board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+}
+#board > div {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    box-sizing: border-box;
+}
+#messages {
+    margin-top: 20px;
+    text-align: center;
+}
+#restart {
+    display: block;
+    margin: 20px auto;
+}
   </style>
 </head>
 <body>
-  <div class="card-game-container">
-    <div class="sidebar">
-      <h3>Your Cards</h3>
-      <div class="cards"></div>
-      <button class="start-game-button">Start Game</button>
-    </div>
-    <div>
-      <h1>Card Game</h1>
-      <div class="card played-card"></div>
-      <div class="other-card"></div>
-      <button class="play-card-button" disabled>Play Card</button>
-      <div class="checkmark"></div>
-      <div class="game-result"></div>
-      <div class="played-cards-box"></div>
-    </div>
-  </div>
+    <div id="board"></div>
+    <button id="restart">Restart</button>
+    <div id="messages"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
-  <script>
-    const socket = io('http://localhost:3000');
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const board = document.getElementById('board');
+        const messages = document.getElementById('messages');
+        let squares = [];
+        for(let i = 0; i < 9; i++){
+            let square = document.createElement('div');
+            square.addEventListener('click', () => {
+                socket.emit('move', i);
+            });
+            board.appendChild(square);
+            squares.push(square);
+        }
 
-    // Get DOM elements
-    const cardsContainer = document.querySelector('.cards');
-    const startGameButton = document.querySelector('.start-game-button');
-    const playedCardDisplay = document.querySelector('.played-card');
-    const otherCardDisplay = document.querySelector('.other-card');
-    const playCardButton = document.querySelector('.play-card-button');
-    const checkmarkDisplay = document.querySelector('.checkmark');
-    const gameResultDisplay = document.querySelector('.game-result');
-    const playedCardsBox = document.querySelector('.played-cards-box');
-
-    // Selected card
-    let selectedCard = null;
-
-    // WebSocket event listeners
-    socket.on('connect', () => {
-      console.log('Connected to the server.');
-    });
-
-    socket.on('cardsUpdated', (data) => {
-      console.log('Cards updated:', data);
-      updateCards(data.cards);
-    });
-
-    socket.on('cardPlayed', (data) => {
-      console.log('Card played:', data);
-      playedCardDisplay.textContent = data.card.value;
-      otherCardDisplay.textContent = data.otherCard.value;
-      checkmarkDisplay.textContent = data.checkmark ? '✓' : '';
-      addPlayedCard(data.card, data.otherCard);
-    });
-
-    socket.on('gameResult', (data) => {
-      console.log('Game result:', data);
-      gameResultDisplay.textContent = data.message;
-    });
-
-    // Start game event listener
-    startGameButton.addEventListener('click', () => {
-      socket.emit('startGame');
-    });
-
-    // Play card event listener
-    playCardButton.addEventListener('click', () => {
-      if (selectedCard) {
-        socket.emit('playCard', { card: selectedCard });
-        selectedCard = null;
-        playedCardDisplay.textContent = '';
-        otherCardDisplay.textContent = '';
-      }
-    });
-
-    // Utility function to get the opponent's socket in a room
-const getOpponentSocket = (room, currentSocketId) => {
-  const roomClients = Array.from(io.sockets.adapter.rooms.get(room));
-  for (let clientId of roomClients) {
-    if (clientId !== currentSocketId) {
-      return io.sockets.sockets.get(clientId);
-    }
-  }
-  return null;
-};
-
-    // Update the cards in the sidebar
-    const updateCards = (cards) => {
-      cardsContainer.innerHTML = '';
-      for (let card of cards) {
-        const cardElement = document.createElement('div');
-        cardElement.classList.add('card');
-        cardElement.textContent = card.value;
-        cardElement.addEventListener('click', () => {
-          selectCard(card);
+        socket.on('message', (message) => {
+            messages.innerText = message;
         });
-        cardsContainer.appendChild(cardElement);
-      }
-    };
 
-    // Select a card
-    const selectCard = (card) => {
-      selectedCard = card;
-      playedCardDisplay.textContent = card.value;
-      playCardButton.disabled = false;
-    };
+        socket.on('move', (data) => {
+            squares[data.index].innerText = data.symbol;
+            checkWinner();
+        });
 
-    // Add played cards to the played cards box
-    const addPlayedCard = (playerCard, otherCard) => {
-      const cardElement = document.createElement('div');
-      cardElement.textContent = `${playerCard.value} vs ${otherCard.value}`;
-      playedCardsBox.appendChild(cardElement);
-    };
-  </script>
+        socket.on('restart', () => {
+            squares.forEach((square) => {
+                square.innerText = '';
+            });
+        });
+
+        document.getElementById('restart').addEventListener('click', () => {
+            socket.emit('restart');
+        });
+
+        function checkWinner() {
+            /* Implement your win condition check here */
+        }
+    </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
